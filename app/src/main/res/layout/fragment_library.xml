@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="16dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/library_title"
+                android:textColor="@color/text_main"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/library_subtitle"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_alignParentEnd="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Settings"
+            android:src="@drawable/ic_settings"
+            app:tint="@color/text_main" />
+    </RelativeLayout>
+
+    <EditText
+        android:id="@+id/searchInput"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/search_bg"
+        android:drawableStart="@drawable/ic_search"
+        android:drawablePadding="12dp"
+        android:hint="@string/search_hint"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:singleLine="true"
+        android:textCursorDrawable="@drawable/search_cursor"
+        android:textColor="@color/text_main"
+        android:textColorHint="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/card_bg"
+        app:tabBackground="@android:color/transparent"
+        app:tabGravity="fill"
+        app:tabIndicator="@null"
+        app:tabMode="fixed"
+        app:tabSelectedTextColor="@color/accent_blue"
+        app:tabTextColor="@color/text_secondary" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnCreatePlaylist"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:backgroundTint="@color/card_soft"
+            android:text="@string/create_new_playlist"
+            android:textAllCaps="false"
+            android:textColor="@color/text_main"
+            app:cornerRadius="14dp"
+            app:icon="@drawable/ic_playlist_add"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:iconTint="@color/accent_blue" />
+
+        <Button
+            android:id="@+id/btnPickMusic"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:backgroundTint="@color/card_soft"
+            android:text="@string/pick_local_music"
+            android:textAllCaps="false"
+            android:textColor="@color/text_main"
+            app:cornerRadius="14dp"
+            app:icon="@drawable/ic_folder"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:iconTint="@color/accent_blue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/scanProgressBarContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:indeterminateTint="@color/accent_blue" />
+
+        <TextView
+            android:id="@+id/tvScanProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/loading_music"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/songRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:fastScrollEnabled="true"
+        android:scrollbars="vertical"
+        app:fastScrollHorizontalThumbDrawable="@drawable/fastscroll_thumb"
+        app:fastScrollHorizontalTrackDrawable="@drawable/fastscroll_track"
+        app:fastScrollVerticalThumbDrawable="@drawable/fastscroll_thumb"
+        app:fastScrollVerticalTrackDrawable="@drawable/fastscroll_track" />
+
+    <ViewStub
+        android:id="@+id/emptyState"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout="@layout/layout_empty_state" />
+</LinearLayout>
