@@ -281,6 +281,7 @@ public class LibraryFragment extends Fragment {
 
         if (currentTab == TAB_SONGS) {
             btnCreatePlaylist.setVisibility(View.GONE);
+            btnPickMusic.setVisibility(View.VISIBLE);
             for (Song song : allSongs) {
                 if (matchesSearch(song)) {
                     displayedItems.add(song);
@@ -289,6 +290,7 @@ public class LibraryFragment extends Fragment {
             songAdapter.setSongs(displayedItems, SongAdapter.TYPE_SONG);
         } else if (currentTab == TAB_LIKED) {
             btnCreatePlaylist.setVisibility(View.GONE);
+            btnPickMusic.setVisibility(View.GONE);
             List<Song> favorites = FavoritesManager.getInstance(requireContext()).getFavoriteSongs();
             for (Song song : favorites) {
                 if (matchesSearch(song)) {
@@ -298,6 +300,7 @@ public class LibraryFragment extends Fragment {
             songAdapter.setSongs(displayedItems, SongAdapter.TYPE_SONG);
         } else {
             btnCreatePlaylist.setVisibility(View.VISIBLE);
+            btnPickMusic.setVisibility(View.GONE);
             List<String> playlists = PlaylistManager.getInstance(requireContext()).getPlaylists();
             for (int i = 0; i < playlists.size(); i++) {
                 String name = playlists.get(i);
