@@ -338,14 +338,27 @@ public class MediaScanner {
             }
         }
 
+        List<Song> combined = new ArrayList<>();
         if (hasStoragePermission(context)) {
             List<Song> localSongs = scanLocalMusic(context, callback);
-            if (!localSongs.isEmpty()) {
-                return localSongs;
+            combined.addAll(localSongs);
+        }
+
+        List<Song> demos = getDemoSongs();
+        for (Song demo : demos) {
+            boolean exists = false;
+            for (Song s : combined) {
+                if (s.getTitle().equalsIgnoreCase(demo.getTitle())) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                combined.add(demo);
             }
         }
 
-        return getDemoSongs();
+        return combined;
     }
 
     private static void cacheLibrarySongs(Context context, List<Song> songs) {

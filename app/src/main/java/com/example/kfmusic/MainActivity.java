@@ -232,12 +232,12 @@ public class MainActivity extends AppCompatActivity implements PlaybackManager.P
     private void updateMiniPlayerUI() {
         Song currentSong = PlaybackManager.getInstance().getCurrentSong();
         boolean isPlaying = PlaybackManager.getInstance().isPlaying();
-        if (currentSong != null && isPlaying) {
+        if (currentSong != null) {
             miniPlayerTitle.setText(currentSong.getTitle());
             miniPlayerArtist.setText(currentSong.getArtist());
             loadMiniPlayerArtwork(currentSong);
             showMiniPlayer(true);
-            updatePlayPauseIcon(true);
+            updatePlayPauseIcon(isPlaying);
         } else {
             showMiniPlayer(false);
         }
@@ -295,11 +295,7 @@ public class MainActivity extends AppCompatActivity implements PlaybackManager.P
     @Override
     public void onPlaybackStatusChanged(boolean isPlaying) {
         updatePlayPauseIcon(isPlaying);
-        if (!isPlaying) {
-            showMiniPlayer(false);
-        } else {
-            updateMiniPlayerUI();
-        }
+        updateMiniPlayerUI();
         if (isPlaying) {
             startProgressUpdater();
         } else {
