@@ -29,6 +29,9 @@ public interface SongDao {
     @Query("SELECT isFavorite FROM songs WHERE id = :songId")
     boolean isFavorite(long songId);
 
+    @Query("SELECT * FROM songs WHERE id = :songId")
+    SongEntity getSongById(long songId);
+
     @Delete
     void deleteSong(SongEntity song);
 

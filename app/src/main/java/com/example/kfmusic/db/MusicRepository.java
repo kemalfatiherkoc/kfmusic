@@ -45,7 +45,14 @@ public class MusicRepository {
     public synchronized void cacheSongs(List<Song> songs) {
         List<SongEntity> entities = new ArrayList<>();
         for (Song song : songs) {
-            entities.add(new SongEntity(song));
+            SongEntity entity = new SongEntity(song);
+            SongEntity existing = songDao.getSongById(song.getId());
+            if (existing != null) {
+                entity.isFavorite = existing.isFavorite;
+                entity.playCount = existing.playCount;
+                entity.lastPlayed = existing.lastPlayed;
+            }
+            entities.add(entity);
         }
         songDao.insertSongs(entities);
         invalidateCache();
