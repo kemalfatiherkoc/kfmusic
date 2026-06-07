@@ -633,8 +633,18 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         PlaylistManager pm = PlaylistManager.getInstance(requireContext());
         List<String> playlists = pm.getPlaylists();
 
+        List<String> visiblePlaylists = new ArrayList<>();
+        String songIdStr = String.valueOf(songId);
+        for (String plName : playlists) {
+            java.util.Set<String> songIds = pm.getSongsInPlaylist(plName);
+            if (!songIds.contains(songIdStr)) {
+                visiblePlaylists.add(plName);
+            }
+        }
+
         ArrayList<String> items = new ArrayList<>(); 
-        items.addAll(playlists);
+        items.add(getString(R.string.create_new_playlist));
+        items.addAll(visiblePlaylists);
 
         UiSheetFragment sheet = UiSheetFragment.newList(
                 getString(R.string.choose_playlist),
@@ -651,10 +661,11 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
                 int index = result.getInt(UiSheetFragment.RESULT_INDEX, -1);
                 if (index == 0) {
                     showCreatePlaylistDialog(songId, () -> reopenPlaylistPicker(songId));
-                } else if (index > 0 && index - 1 < playlists.size()) {
-                    String selected = playlists.get(index - 1);
+                } else if (index > 0 && index - 1 < visiblePlaylists.size()) {
+                    String selected = visiblePlaylists.get(index - 1);
                     pm.addSongToPlaylist(selected, songId);
                     Toast.makeText(requireContext(), getString(R.string.added_to_playlist, selected), Toast.LENGTH_SHORT).show();
+                    getParentFragmentManager().setFragmentResult("playlist_changed", new Bundle());
                 }
             }
         });
