@@ -120,8 +120,7 @@ public class MainActivity extends AppCompatActivity implements PlaybackManager.P
                         showMiniPlayer(false);
                     } else {
                         Song currentSong = PlaybackManager.getInstance().getCurrentSong();
-                        boolean isPlaying = PlaybackManager.getInstance().isPlaying();
-                        if (currentSong != null && isPlaying) {
+                        if (currentSong != null) {
                             showMiniPlayer(true);
                         }
                     }
@@ -258,12 +257,14 @@ public class MainActivity extends AppCompatActivity implements PlaybackManager.P
 
         miniPlayerArt.setTag(song.getId());
         miniArtExecutor.execute(() -> {
+            java.net.HttpURLConnection connection = null;
+            java.io.InputStream input = null;
             try {
                 java.net.URL url = new java.net.URL(coverUrl);
-                java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+                connection = (java.net.HttpURLConnection) url.openConnection();
                 connection.setDoInput(true);
                 connection.connect();
-                java.io.InputStream input = connection.getInputStream();
+                input = connection.getInputStream();
                 final android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(input);
                 if (bitmap != null) {
                     new Handler(Looper.getMainLooper()).post(() -> {
@@ -275,6 +276,13 @@ public class MainActivity extends AppCompatActivity implements PlaybackManager.P
                     });
                 }
             } catch (Exception ignored) {
+            } finally {
+                if (input != null) {
+                    try { input.close(); } catch (Exception ignored) {}
+                }
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         });
     }

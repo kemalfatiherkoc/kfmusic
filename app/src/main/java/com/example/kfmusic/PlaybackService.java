@@ -58,6 +58,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     private boolean isBecomingNoisyRegistered = false;
     private boolean isPrepared = false;
+    private boolean wasPlayingBeforeFocusLoss = false;
+    private boolean wasDucking = false;
+    private int consecutiveErrors = 0;
 
     private int headsetClickCount = 0;
     private final Handler headsetHandler = new Handler(Looper.getMainLooper());
@@ -169,7 +172,12 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
         mediaPlayer.setOnCompletionListener(mp -> {
             if (PlaybackManager.getInstance().getRepeatMode() == PlaybackManager.REPEAT_ONE) {
-                playSong(PlaybackManager.getInstance().getCurrentSong());
+                Song currentSong = PlaybackManager.getInstance().getCurrentSong();
+                if (currentSong != null) {
+                    playSong(currentSong);
+                } else {
+                    playNext();
+                }
             } else {
                 playNext();
             }
@@ -177,10 +185,19 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         mediaPlayer.setOnErrorListener((mp, what, extra) -> {
             Log.e(TAG, "MediaPlayer error: " + what + ", " + extra);
             isPrepared = false;
-            new Handler(Looper.getMainLooper()).post(() -> {
-                Toast.makeText(getApplicationContext(), "Unable to play this track, skipping...", Toast.LENGTH_SHORT).show();
-            });
-            playNext();
+            consecutiveErrors++;
+            if (consecutiveErrors >= 3) {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    Toast.makeText(getApplicationContext(), "Too many playback errors, stopping.", Toast.LENGTH_SHORT).show();
+                });
+                stopForeground(true);
+                stopSelf();
+            } else {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    Toast.makeText(getApplicationContext(), "Unable to play this track, skipping...", Toast.LENGTH_SHORT).show();
+                });
+                playNext();
+            }
             return true;
         });
 
@@ -299,6 +316,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
             mediaPlayer.setOnPreparedListener(mp -> {
                 isPrepared = true;
+                consecutiveErrors = 0;
                 mediaPlayer.start();
 
                 // Task 137: Increment play count in database
@@ -459,17 +477,26 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     public void onAudioFocusChange(int focusChange) {
         switch (focusChange) {
             case AudioManager.AUDIOFOCUS_GAIN:
-                fadeVolume(0.0f, 1.0f, 500, null);
-                resume();
+                if (wasDucking) {
+                    fadeVolume(0.2f, 1.0f, 500, null);
+                    wasDucking = false;
+                }
+                if (wasPlayingBeforeFocusLoss) {
+                    resume();
+                    wasPlayingBeforeFocusLoss = false;
+                }
                 break;
             case AudioManager.AUDIOFOCUS_LOSS:
+                wasPlayingBeforeFocusLoss = mediaPlayer.isPlaying();
                 pause();
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                wasPlayingBeforeFocusLoss = mediaPlayer.isPlaying();
                 pause();
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                 if (mediaPlayer.isPlaying()) {
+                    wasDucking = true;
                     mediaPlayer.setVolume(0.2f, 0.2f);
                 }
                 break;
@@ -514,13 +541,18 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     }
 
     private Bitmap getAlbumArtBitmap(long albumId) {
+        java.io.InputStream in = null;
         try {
             Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
             Uri uri = android.content.ContentUris.withAppendedId(sArtworkUri, albumId);
-            java.io.InputStream in = getContentResolver().openInputStream(uri);
+            in = getContentResolver().openInputStream(uri);
             return BitmapFactory.decodeStream(in);
         } catch (Exception e) {
             return null;
+        } finally {
+            if (in != null) {
+                try { in.close(); } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -549,14 +581,14 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 .setColor(0xFF5E7CE2)
                 .setLargeIcon(albumArt)
                 .addAction(new Notification.Action.Builder(
-                        prevIntent.hashCode(), "Previous", prevIntent).build())
+                        R.drawable.ic_skip_previous, "Previous", prevIntent).build())
                 .addAction(new Notification.Action.Builder(
                         isPlaying ? R.drawable.ic_pause : R.drawable.ic_play, 
                         isPlaying ? "Pause" : "Play", playPauseIntent).build())
                 .addAction(new Notification.Action.Builder(
-                        nextIntent.hashCode(), "Next", nextIntent).build())
+                        R.drawable.ic_skip_next, "Next", nextIntent).build())
                 .addAction(new Notification.Action.Builder(
-                        stopIntent.hashCode(), "Stop", stopIntent).build())
+                        R.drawable.ic_close, "Stop", stopIntent).build())
                 .setOngoing(isPlaying);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -635,6 +667,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         unregisterNoisyReceiver();
         abandonAudioFocus();
         releaseWifiLock();
+        sleepHandler.removeCallbacks(sleepRunnable);
         com.example.kfmusic.utils.AudioEffectManager.getInstance(this).releaseEffects();
         if (mediaPlayer != null) {
             mediaPlayer.release();

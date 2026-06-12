@@ -123,7 +123,7 @@ public class Song {
     }
 
     public void setComposer(String composer) {
-        this.composer = composer;
+        this.composer = composer != null ? composer : "Unknown Composer";
     }
 
     public String getGenre() {
@@ -131,7 +131,7 @@ public class Song {
     }
 
     public void setGenre(String genre) {
-        this.genre = genre;
+        this.genre = genre != null ? genre : "Unknown Genre";
     }
 
     public long getFileSize() {
@@ -172,5 +172,18 @@ public class Song {
 
     public void setCoverUrl(String coverUrl) {
         this.coverUrl = coverUrl;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Song song = (Song) o;
+        return id == song.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (id ^ (id >>> 32));
     }
 }

@@ -215,6 +215,7 @@ public class LibraryFragment extends Fragment {
     }
 
     private void importSelectedMusic(Intent data) {
+        if (!isAdded()) return;
         List<Uri> uris = new ArrayList<>();
         if (data.getClipData() != null) {
             for (int i = 0; i < data.getClipData().getItemCount(); i++) {
@@ -418,7 +419,6 @@ public class LibraryFragment extends Fragment {
             getParentFragmentManager().beginTransaction()
                     .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
                     .add(R.id.fragment_container, fragment)
-                    .addToBackStack(null)
                     .commit();
         }
     }

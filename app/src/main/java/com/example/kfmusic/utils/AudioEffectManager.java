@@ -58,6 +58,7 @@ public class AudioEffectManager {
             }
 
             applySavedPresets();
+            restoreCustomBandLevels();
         } catch (Exception e) {
             Log.e(TAG, "Error initializing audio effects", e);
         }
@@ -181,6 +182,28 @@ public class AudioEffectManager {
     private void applySavedPresets() {
         if (equalizer != null) {
             applyPreset(activePreset);
+        }
+    }
+
+    private void restoreCustomBandLevels() {
+        if (equalizer == null) return;
+        try {
+            short numBands = equalizer.getNumberOfBands();
+            boolean hasCustomBands = false;
+            for (short i = 0; i < numBands; i++) {
+                if (prefs.contains("band_" + i)) {
+                    hasCustomBands = true;
+                    break;
+                }
+            }
+            if (hasCustomBands) {
+                for (short i = 0; i < numBands; i++) {
+                    short level = (short) prefs.getInt("band_" + i, 0);
+                    equalizer.setBandLevel(i, level);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error restoring custom band levels", e);
         }
     }
 }

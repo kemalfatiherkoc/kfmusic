@@ -45,7 +45,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
     private ImageButton btnNext;
     private View btnAddToPlaylist;
     private android.widget.ImageView playerAlbumArt;
-    private android.widget.ImageView playerBackgroundBlur;
+
     private static final java.util.concurrent.ExecutorService artLoaderExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
     private androidx.cardview.widget.CardView albumArtCard;
     private android.widget.ScrollView lyricsContainer;
@@ -96,7 +96,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         btnNext = view.findViewById(R.id.btnNext);
         btnAddToPlaylist = view.findViewById(R.id.btnAddToPlaylist);
         playerAlbumArt = view.findViewById(R.id.playerAlbumArt);
-        playerBackgroundBlur = view.findViewById(R.id.playerBackgroundBlur);
+
         albumArtCard = view.findViewById(R.id.albumArtCard);
         lyricsContainer = view.findViewById(R.id.lyricsContainer);
         tvLyrics = view.findViewById(R.id.tvLyrics);
@@ -128,12 +128,14 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         playerAlbumArt.setOnTouchListener(new OnSwipeTouchListener(requireContext()) {
             @Override
             public void onSwipeLeft() {
+                if (!isAdded()) return;
                 PlaybackManager.getInstance().playNext();
                 Toast.makeText(requireContext(), getString(R.string.next_track), Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onSwipeRight() {
+                if (!isAdded()) return;
                 PlaybackManager.getInstance().playPrevious();
                 Toast.makeText(requireContext(), getString(R.string.previous_track), Toast.LENGTH_SHORT).show();
             }
@@ -188,6 +190,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         btnPrevious.setOnClickListener(v -> PlaybackManager.getInstance().playPrevious());
 
         btnLike.setOnClickListener(v -> {
+            if (!isAdded()) return;
             Song current = PlaybackManager.getInstance().getCurrentSong();
             if (current != null) {
                 FavoritesManager.getInstance(requireContext()).toggleFavorite(current.getId());
@@ -198,6 +201,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         btnAddToPlaylist.setOnClickListener(v -> showAddToPlaylistDialog());
 
         btnShuffle.setOnClickListener(v -> {
+            if (!isAdded()) return;
             boolean shuffle = !PlaybackManager.getInstance().isShuffleEnabled();
             PlaybackManager.getInstance().setShuffleEnabled(shuffle);
             updateShuffleButton();
@@ -205,6 +209,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         });
 
         btnRepeat.setOnClickListener(v -> {
+            if (!isAdded()) return;
             int currentMode = PlaybackManager.getInstance().getRepeatMode();
             int nextMode = (currentMode + 1) % 3;
             PlaybackManager.getInstance().setRepeatMode(nextMode);
@@ -218,6 +223,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         btnQueue.setOnClickListener(v -> showQueueDialog());
 
         btnRewind10.setOnClickListener(v -> {
+            if (!isAdded()) return;
             int currentPos = PlaybackManager.getInstance().getCurrentPosition();
             int targetPos = Math.max(0, currentPos - 10000);
             PlaybackManager.getInstance().seekTo(targetPos);
@@ -225,6 +231,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         });
 
         btnForward10.setOnClickListener(v -> {
+            if (!isAdded()) return;
             int currentPos = PlaybackManager.getInstance().getCurrentPosition();
             int duration = PlaybackManager.getInstance().getDuration();
             int targetPos = Math.min(duration, currentPos + 10000);
@@ -278,42 +285,39 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         playerAlbumArt.setImageTintList(android.content.res.ColorStateList.valueOf(getResources().getColor(R.color.accent_blue)));
         int pad = (int) (72 * getResources().getDisplayMetrics().density);
         playerAlbumArt.setPadding(pad, pad, pad, pad);
-        playerBackgroundBlur.setImageBitmap(null);
+
 
         String coverUrl = song.getCoverUrl();
         if (coverUrl != null && !coverUrl.isEmpty()) {
             playerAlbumArt.setTag(song.getId());
             artLoaderExecutor.execute(() -> {
+                java.net.HttpURLConnection connection = null;
+                java.io.InputStream input = null;
                 try {
                     java.net.URL url = new java.net.URL(coverUrl);
-                    java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+                    connection = (java.net.HttpURLConnection) url.openConnection();
                     connection.setDoInput(true);
                     connection.connect();
-                    java.io.InputStream input = connection.getInputStream();
+                    input = connection.getInputStream();
                     final android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(input);
                     if (bitmap != null) {
-                        int scaleWidth = bitmap.getWidth() / 10;
-                        int scaleHeight = bitmap.getHeight() / 10;
-                        final android.graphics.Bitmap blurredBitmap;
-                        if (scaleWidth > 0 && scaleHeight > 0) {
-                            android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(bitmap, scaleWidth, scaleHeight, false);
-                            blurredBitmap = blur(scaled, 8);
-                        } else {
-                            blurredBitmap = null;
-                        }
                         new Handler(Looper.getMainLooper()).post(() -> {
                             if (isAdded() && playerAlbumArt.getTag() != null && (Long) playerAlbumArt.getTag() == song.getId()) {
                                 playerAlbumArt.setImageBitmap(bitmap);
                                 playerAlbumArt.setImageTintList(null);
                                 playerAlbumArt.setPadding(0, 0, 0, 0);
-                                if (blurredBitmap != null) {
-                                    playerBackgroundBlur.setImageBitmap(blurredBitmap);
-                                }
                             }
                         });
                     }
                 } catch (Exception e) {
                     // ignore
+                } finally {
+                    if (input != null) {
+                        try { input.close(); } catch (Exception ignored) {}
+                    }
+                    if (connection != null) {
+                        connection.disconnect();
+                    }
                 }
             });
         } else if (song.getFilePath() != null) {
@@ -323,35 +327,27 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
                 final android.content.Context ctx = getContext();
                 if (ctx != null) {
                     artLoaderExecutor.execute(() -> {
+                        java.io.InputStream in = null;
                         try {
                             android.net.Uri sArtworkUri = android.net.Uri.parse("content://media/external/audio/albumart");
                             android.net.Uri uri = android.content.ContentUris.withAppendedId(sArtworkUri, albumId);
-                            java.io.InputStream in = ctx.getContentResolver().openInputStream(uri);
+                            in = ctx.getContentResolver().openInputStream(uri);
                             final android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(in);
                             if (bitmap != null) {
-                                int scaleWidth = bitmap.getWidth() / 10;
-                                int scaleHeight = bitmap.getHeight() / 10;
-                                final android.graphics.Bitmap blurredBitmap;
-                                if (scaleWidth > 0 && scaleHeight > 0) {
-                                    android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(bitmap, scaleWidth, scaleHeight, false);
-                                    blurredBitmap = blur(scaled, 8);
-                                } else {
-                                    blurredBitmap = null;
-                                }
-
                                 new Handler(Looper.getMainLooper()).post(() -> {
                                     if (isAdded() && playerAlbumArt.getTag() != null && (Long) playerAlbumArt.getTag() == song.getId()) {
                                         playerAlbumArt.setImageBitmap(bitmap);
                                         playerAlbumArt.setImageTintList(null);
                                         playerAlbumArt.setPadding(0, 0, 0, 0);
-                                        if (blurredBitmap != null) {
-                                            playerBackgroundBlur.setImageBitmap(blurredBitmap);
-                                        }
                                     }
                                 });
                             }
                         } catch (Exception e) {
                             // ignore
+                        } finally {
+                            if (in != null) {
+                                try { in.close(); } catch (Exception ignored) {}
+                            }
                         }
                     });
                 }
@@ -610,6 +606,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         );
 
         getParentFragmentManager().setFragmentResultListener("playlist_create_sheet", this, (requestKey, result) -> {
+            if (!isAdded()) return;
             String action = result.getString(UiSheetFragment.RESULT_ACTION, "");
             if ("primary".equals(action)) {
                 String name = result.getString(UiSheetFragment.RESULT_TEXT, "");
@@ -630,15 +627,23 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
     }
 
     private void showPlaylistPicker(long songId) {
+        showPlaylistPicker(songId, false);
+    }
+
+    private void showPlaylistPicker(long songId, boolean showAll) {
         PlaylistManager pm = PlaylistManager.getInstance(requireContext());
         List<String> playlists = pm.getPlaylists();
 
         List<String> visiblePlaylists = new ArrayList<>();
         String songIdStr = String.valueOf(songId);
         for (String plName : playlists) {
-            java.util.Set<String> songIds = pm.getSongsInPlaylist(plName);
-            if (!songIds.contains(songIdStr)) {
+            if (showAll) {
                 visiblePlaylists.add(plName);
+            } else {
+                java.util.Set<String> songIds = pm.getSongsInPlaylist(plName);
+                if (!songIds.contains(songIdStr)) {
+                    visiblePlaylists.add(plName);
+                }
             }
         }
 
@@ -656,6 +661,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         );
 
         getParentFragmentManager().setFragmentResultListener("playlist_picker_sheet", this, (requestKey, result) -> {
+            if (!isAdded()) return;
             String action = result.getString(UiSheetFragment.RESULT_ACTION, "");
             if ("item".equals(action)) {
                 int index = result.getInt(UiSheetFragment.RESULT_INDEX, -1);
@@ -674,8 +680,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
     }
 
     private void reopenPlaylistPicker(long songId) {
-        getParentFragmentManager().popBackStack();
-        new Handler(Looper.getMainLooper()).postDelayed(() -> showPlaylistPicker(songId), 120);
+        new Handler(Looper.getMainLooper()).post(() -> showPlaylistPicker(songId, true));
     }
 
     private void showQueueSheet(List<Song> queue) {
@@ -694,6 +699,7 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
         );
 
         getParentFragmentManager().setFragmentResultListener("queue_sheet", this, (requestKey, result) -> {
+            if (!isAdded()) return;
             String action = result.getString(UiSheetFragment.RESULT_ACTION, "");
             if ("item".equals(action)) {
                 int index = result.getInt(UiSheetFragment.RESULT_INDEX, -1);
@@ -714,7 +720,6 @@ public class NowPlayingFragment extends Fragment implements PlaybackManager.Play
             getParentFragmentManager().beginTransaction()
                     .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
                     .add(R.id.fragment_container, fragment)
-                    .addToBackStack(null)
                     .commit();
         }
     }

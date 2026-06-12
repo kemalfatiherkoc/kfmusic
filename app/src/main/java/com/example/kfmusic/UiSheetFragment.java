@@ -7,12 +7,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import java.util.ArrayList;
 
@@ -62,6 +65,17 @@ public class UiSheetFragment extends Fragment {
         return fragment;
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        requireActivity().getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                dismiss();
+            }
+        });
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -72,6 +86,7 @@ public class UiSheetFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        ImageButton btnClose = view.findViewById(R.id.btnSheetClose);
         TextView tvTitle = view.findViewById(R.id.tvSheetTitle);
         TextView tvMessage = view.findViewById(R.id.tvSheetMessage);
         EditText etInput = view.findViewById(R.id.etSheetInput);
@@ -92,6 +107,8 @@ public class UiSheetFragment extends Fragment {
             btnSecondary.setText(secondaryText);
             btnSecondary.setVisibility(View.VISIBLE);
         }
+
+        btnClose.setOnClickListener(v -> dismiss());
 
         if (mode == MODE_INPUT) {
             etInput.setVisibility(View.VISIBLE);
@@ -151,8 +168,11 @@ public class UiSheetFragment extends Fragment {
     }
 
     private void dismiss() {
-        if (getParentFragmentManager() != null) {
-            getParentFragmentManager().popBackStack();
+        FragmentManager fm = getParentFragmentManager();
+        if (fm != null) {
+            fm.beginTransaction()
+                    .remove(this)
+                    .commit();
         }
     }
 }

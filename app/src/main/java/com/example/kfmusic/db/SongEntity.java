@@ -63,12 +63,12 @@ public class SongEntity {
         song.setAlbumId(albumId);
         song.setTrackNumber(trackNumber);
         song.setYear(year);
-        song.setComposer(composer);
-        song.setGenre(genre);
+        if (composer != null) song.setComposer(composer);
+        if (genre != null) song.setGenre(genre);
         song.setFileSize(fileSize);
         song.setPlayCount(playCount);
         song.setLastPlayed(lastPlayed);
-        song.setCoverUrl(coverUrl);
+        if (coverUrl != null) song.setCoverUrl(coverUrl);
         return song;
     }
 }

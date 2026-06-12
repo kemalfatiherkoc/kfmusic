@@ -27,6 +27,7 @@ public class SplashFragment extends Fragment {
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (!isAdded()) return;
                 if (isGranted) {
                     navigateToLibrary();
                 } else {

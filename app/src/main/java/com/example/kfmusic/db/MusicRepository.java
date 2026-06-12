@@ -18,6 +18,7 @@ public class MusicRepository {
         this.queueDao = db.queueDao();
     }
 
+    @androidx.room.Transaction
     public void saveQueue(List<Song> songs) {
         queueDao.clearQueue();
         List<QueueItemEntity> entities = new ArrayList<>();
@@ -38,11 +39,14 @@ public class MusicRepository {
 
     private static List<Song> songsCache = null;
 
-    private synchronized void invalidateCache() {
-        songsCache = null;
+    private void invalidateCache() {
+        synchronized (MusicRepository.class) {
+            songsCache = null;
+        }
     }
 
-    public synchronized void cacheSongs(List<Song> songs) {
+    public void cacheSongs(List<Song> songs) {
+        synchronized (MusicRepository.class) {
         List<SongEntity> entities = new ArrayList<>();
         for (Song song : songs) {
             SongEntity entity = new SongEntity(song);
@@ -55,27 +59,33 @@ public class MusicRepository {
             entities.add(entity);
         }
         songDao.insertSongs(entities);
-        invalidateCache();
-    }
-
-    public synchronized List<Song> getCachedSongs() {
-        if (songsCache == null) {
-            List<SongEntity> entities = songDao.getAllSongs();
-            songsCache = new ArrayList<>();
-            for (SongEntity entity : entities) {
-                songsCache.add(entity.toSong());
-            }
+            invalidateCache();
         }
-        return new ArrayList<>(songsCache);
     }
 
-    public synchronized void updateFavorite(long songId, boolean isFavorite) {
-        songDao.updateFavoriteStatus(songId, isFavorite);
-        invalidateCache();
+    public List<Song> getCachedSongs() {
+        synchronized (MusicRepository.class) {
+            if (songsCache == null) {
+                List<SongEntity> entities = songDao.getAllSongs();
+                songsCache = new ArrayList<>();
+                for (SongEntity entity : entities) {
+                    songsCache.add(entity.toSong());
+                }
+            }
+            return new ArrayList<>(songsCache);
+        }
+    }
+
+    public void updateFavorite(long songId, boolean isFavorite) {
+        synchronized (MusicRepository.class) {
+            songDao.updateFavoriteStatus(songId, isFavorite);
+            invalidateCache();
+        }
     }
 
     public boolean isFavorite(long songId) {
-        return songDao.isFavorite(songId);
+        Boolean result = songDao.isFavorite(songId);
+        return result != null && result;
     }
 
     public List<Song> getFavoriteSongs() {
@@ -87,14 +97,16 @@ public class MusicRepository {
         return songs;
     }
 
-    public synchronized void syncFavorites(List<Long> favoriteSongIds) {
-        for (SongEntity entity : songDao.getAllSongs()) {
-            boolean isFav = favoriteSongIds.contains(entity.id);
-            if (entity.isFavorite != isFav) {
-                songDao.updateFavoriteStatus(entity.id, isFav);
+    public void syncFavorites(List<Long> favoriteSongIds) {
+        synchronized (MusicRepository.class) {
+            for (SongEntity entity : songDao.getAllSongs()) {
+                boolean isFav = favoriteSongIds.contains(entity.id);
+                if (entity.isFavorite != isFav) {
+                    songDao.updateFavoriteStatus(entity.id, isFav);
+                }
             }
+            invalidateCache();
         }
-        invalidateCache();
     }
 
     @androidx.room.Transaction
@@ -102,7 +114,9 @@ public class MusicRepository {
         songDao.deleteSongById(songId);
         playlistDao.removeSongFromAllPlaylists(songId);
         queueDao.removeSongFromQueue(songId);
-        invalidateCache();
+        synchronized (MusicRepository.class) {
+            invalidateCache();
+        }
     }
 
     public void validateAndCleanSongs(Context context) {
@@ -137,7 +151,9 @@ public class MusicRepository {
             for (SongEntity entity : toDelete) {
                 deleteSong(entity.id);
             }
-            invalidateCache();
+            synchronized (MusicRepository.class) {
+                invalidateCache();
+            }
         }
     }
 
@@ -213,9 +229,11 @@ public class MusicRepository {
         }
     }
 
-    public synchronized void incrementPlayCount(long songId) {
-        songDao.incrementPlayCount(songId, System.currentTimeMillis());
-        invalidateCache();
+    public void incrementPlayCount(long songId) {
+        synchronized (MusicRepository.class) {
+            songDao.incrementPlayCount(songId, System.currentTimeMillis());
+            invalidateCache();
+        }
     }
 
     public List<Song> getMostPlayedSongs() {

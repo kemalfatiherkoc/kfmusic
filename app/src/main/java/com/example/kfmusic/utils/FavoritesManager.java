@@ -23,8 +23,10 @@ public class FavoritesManager {
     }
 
     public void toggleFavorite(long songId) {
-        boolean fav = isFavorite(songId);
-        repository.updateFavorite(songId, !fav);
+        synchronized (this) {
+            boolean fav = isFavorite(songId);
+            repository.updateFavorite(songId, !fav);
+        }
     }
 
     public java.util.List<com.example.kfmusic.model.Song> getFavoriteSongs() {

@@ -65,6 +65,7 @@ public class SettingsFragment extends Fragment {
                 language = AppSettings.LANGUAGE_TR;
             }
             AppSettings.setLanguage(requireContext(), language);
+            requireActivity().recreate();
         });
 
         rgTheme.setOnCheckedChangeListener((group, checkedId) -> {

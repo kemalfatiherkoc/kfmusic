@@ -77,6 +77,8 @@ public class PlaylistDetailFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 
+        getParentFragmentManager().setFragmentResultListener("playlist_changed", this, (requestKey, result) -> bindPlaylist());
+
         return view;
     }
 
@@ -87,6 +89,7 @@ public class PlaylistDetailFragment extends Fragment {
     }
 
     private void bindPlaylist() {
+        if (!isAdded()) return;
         String playlistName = getArguments() != null ? getArguments().getString(ARG_PLAYLIST_NAME, "") : "";
         tvPlaylistTitle.setText(playlistName);
 

@@ -17,7 +17,15 @@ public abstract class AppDatabase extends RoomDatabase {
     public static final androidx.room.migration.Migration MIGRATION_1_2 = new androidx.room.migration.Migration(1, 2) {
         @Override
         public void migrate(@androidx.annotation.NonNull androidx.sqlite.db.SupportSQLiteDatabase database) {
-            database.execSQL("CREATE TABLE IF NOT EXISTS `queue_items` (`songId` INTEGER NOT NULL, `orderIndex` INTEGER NOT NULL, PRIMARY KEY(`songId`))");
+            database.execSQL("CREATE TABLE IF NOT EXISTS `queue_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `songId` INTEGER NOT NULL, `position` INTEGER NOT NULL)");
+        }
+    };
+
+    public static final androidx.room.migration.Migration MIGRATION_2_3 = new androidx.room.migration.Migration(2, 3) {
+        @Override
+        public void migrate(@androidx.annotation.NonNull androidx.sqlite.db.SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `artist_metadata` (`artistName` TEXT NOT NULL, `bio` TEXT, PRIMARY KEY(`artistName`))");
+            database.execSQL("CREATE TABLE IF NOT EXISTS `album_metadata` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `albumName` TEXT NOT NULL, `artistName` TEXT, `year` INTEGER NOT NULL)");
         }
     };
 
@@ -56,7 +64,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (instance == null) {
                     instance = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, "kfmusic_local.db")
-                             .addMigrations(MIGRATION_1_2, MIGRATION_3_4)
+                             .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                              .addCallback(roomCallback)
                              .fallbackToDestructiveMigration()
                              .allowMainThreadQueries() // Simple, responsive offline calls

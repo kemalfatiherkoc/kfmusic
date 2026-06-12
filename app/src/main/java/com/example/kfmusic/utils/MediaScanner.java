@@ -24,7 +24,7 @@ public class MediaScanner {
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static List<Song> demoSongsCache;
-    private static List<Song> cachedLibrarySongs = new ArrayList<>();
+    private static volatile List<Song> cachedLibrarySongs = new ArrayList<>();
 
     public interface ScanCallback {
         void onProgress(int progress, int total);

@@ -37,6 +37,8 @@ public class PlaybackManager {
     private int repeatMode = REPEAT_OFF;
     private boolean isShuffleEnabled = false;
 
+    private boolean isInitialized = false;
+
     // Interface to listen for playback updates
     public interface PlaybackListener {
         void onTrackChanged(Song song);
@@ -72,6 +74,10 @@ public class PlaybackManager {
     }
 
     public void init(Context context) {
+        if (isInitialized) {
+            return;
+        }
+        isInitialized = true;
         this.mContext = context.getApplicationContext();
         this.repository = new MusicRepository(mContext);
         if (repository.getCachedSongs().isEmpty()) {
@@ -97,7 +103,6 @@ public class PlaybackManager {
             if (!ids.isEmpty()) {
                 List<Song> allCached = repository.getCachedSongs();
                 if (allCached.isEmpty()) {
-                    // Fallback to media scanning or demo songs to build candidates
                     allCached = MediaScanner.getDemoSongs();
                 }
                 List<Song> restored = new ArrayList<>();
@@ -112,7 +117,17 @@ public class PlaybackManager {
                 if (!restored.isEmpty()) {
                     playlist = restored;
                     originalPlaylist = new ArrayList<>(playlist);
-                    currentSongIndex = -1;
+                    if (mContext != null) {
+                        int savedIndex = mContext.getSharedPreferences("kfmusic_playback_prefs", Context.MODE_PRIVATE)
+                                .getInt("current_index", -1);
+                        if (savedIndex >= 0 && savedIndex < playlist.size()) {
+                            currentSongIndex = savedIndex;
+                        } else {
+                            currentSongIndex = 0;
+                        }
+                    } else {
+                        currentSongIndex = 0;
+                    }
                 }
             }
         }
@@ -197,6 +212,15 @@ public class PlaybackManager {
         this.originalPlaylist = new ArrayList<>(playlist);
         if (startIndex >= 0 && startIndex < playlist.size()) {
             this.currentSongIndex = startIndex;
+            if (isShuffleEnabled) {
+                Song currentSong = playlist.get(currentSongIndex);
+                List<Song> shuffled = new ArrayList<>(playlist);
+                shuffled.remove(currentSong);
+                Collections.shuffle(shuffled);
+                shuffled.add(0, currentSong);
+                currentSongIndex = 0;
+                this.playlist = shuffled;
+            }
             if (isBound && playbackService != null) {
                 playbackService.playSong(playlist.get(currentSongIndex));
             }
@@ -255,22 +279,18 @@ public class PlaybackManager {
     public void playNext() {
         if (playlist.isEmpty()) return;
 
-        if (repeatMode == REPEAT_ALL || repeatMode == REPEAT_OFF) {
-            if (currentSongIndex == playlist.size() - 1) {
-                if (repeatMode == REPEAT_OFF) {
-                    if (isBound && playbackService != null) {
-                        playbackService.pause();
-                        playbackService.seekTo(0);
-                    }
-                    return;
-                } else {
-                    currentSongIndex = 0;
+        if (currentSongIndex == playlist.size() - 1) {
+            if (repeatMode == REPEAT_OFF) {
+                if (isBound && playbackService != null) {
+                    playbackService.pause();
+                    playbackService.seekTo(0);
                 }
+                return;
             } else {
-                currentSongIndex++;
+                currentSongIndex = 0;
             }
-        } else if (repeatMode == REPEAT_ONE) {
-            currentSongIndex = (currentSongIndex + 1) % playlist.size();
+        } else {
+            currentSongIndex++;
         }
 
         if (isBound && playbackService != null) {
@@ -346,6 +366,8 @@ public class PlaybackManager {
             if (currentSong != null) {
                 shuffled.add(0, currentSong);
                 currentSongIndex = 0;
+            } else if (!shuffled.isEmpty()) {
+                currentSongIndex = 0;
             }
             playlist = shuffled;
         } else {
@@ -354,6 +376,8 @@ public class PlaybackManager {
                 playlist = new ArrayList<>(originalPlaylist);
                 if (currentSong != null) {
                     currentSongIndex = playlist.indexOf(currentSong);
+                } else if (!playlist.isEmpty()) {
+                    currentSongIndex = 0;
                 }
             }
         }
@@ -390,8 +414,17 @@ public class PlaybackManager {
 
     public void playNext(Song song) {
         if (song == null) return;
+
+        int oldIndex = playlist.indexOf(song);
+
         playlist.remove(song);
         originalPlaylist.remove(song);
+
+        if (oldIndex >= 0 && oldIndex < currentSongIndex) {
+            currentSongIndex--;
+        } else if (oldIndex == currentSongIndex && currentSongIndex >= playlist.size() && !playlist.isEmpty()) {
+            currentSongIndex = playlist.size() - 1;
+        }
 
         int nextIndex = currentSongIndex + 1;
         if (nextIndex < 0 || nextIndex > playlist.size()) {

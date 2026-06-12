@@ -6,17 +6,6 @@
     android:background="@color/bg_dark"
     android:padding="24dp">
 
-    <ImageView
-        android:id="@+id/playerBackgroundBlur"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:alpha="0.20"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
     <!-- Top Navigation Bar -->
     <ImageButton
         android:id="@+id/btnCollapse"
@@ -144,7 +133,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/add_to_playlist"
+            android:contentDescription="@string/like"
             android:src="@drawable/ic_heart_border"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -214,9 +203,9 @@
             android:layout_height="48dp"
             android:layout_marginEnd="16dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Rewind 10s"
+            android:contentDescription="@string/rewind"
             android:padding="8dp"
-            android:src="@android:drawable/ic_media_rew"
+            android:src="@drawable/ic_rewind"
             app:tint="@color/text_main" />
 
         <!-- Skip Previous -->
@@ -225,7 +214,7 @@
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Previous Song"
+            android:contentDescription="@string/previous_song"
             android:padding="12dp"
             android:src="@drawable/ic_skip_previous"
             app:tint="@color/text_main" />
@@ -237,7 +226,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:contentDescription="Play/Pause"
+            android:contentDescription="@string/play"
             app:backgroundTint="@color/accent_blue"
             app:fabCustomSize="64dp"
             app:maxImageSize="32dp"
@@ -250,7 +239,7 @@
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Next Song"
+            android:contentDescription="@string/next_song"
             android:padding="12dp"
             android:src="@drawable/ic_skip_next"
             app:tint="@color/text_main" />
@@ -262,9 +251,9 @@
             android:layout_height="48dp"
             android:layout_marginStart="16dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Forward 10s"
+            android:contentDescription="@string/forward"
             android:padding="8dp"
-            android:src="@android:drawable/ic_media_ff"
+            android:src="@drawable/ic_forward"
             app:tint="@color/text_main" />
     </LinearLayout>
 
@@ -296,7 +285,7 @@
             android:layout_height="48dp"
             android:layout_marginEnd="16dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Shuffle"
+            android:contentDescription="@string/shuffle"
             android:src="@drawable/ic_shuffle"
             app:tint="@color/text_secondary" />
 
@@ -321,7 +310,7 @@
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Repeat"
+            android:contentDescription="@string/repeat"
             android:src="@drawable/ic_repeat"
             app:tint="@color/text_secondary" />
 
@@ -330,7 +319,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Queue"
+            android:contentDescription="@string/queue"
             android:src="@drawable/ic_queue"
             app:tint="@color/text_secondary" />
     </LinearLayout>

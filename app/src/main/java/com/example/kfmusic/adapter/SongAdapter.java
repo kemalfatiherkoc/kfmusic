@@ -28,7 +28,17 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public static final int TYPE_PLAYLIST = 3;
     public static final int TYPE_LETTER_HEADER = 5;
 
-    private List<Song> songList;
+    public static class ListItem {
+        public static final int TYPE_SONG = 0;
+        public static final int TYPE_HEADER = 1;
+        public int type;
+        public Song song;
+        public String header;
+        public ListItem(Song song) { this.type = TYPE_SONG; this.song = song; }
+        public ListItem(String header) { this.type = TYPE_HEADER; this.header = header; }
+    }
+
+    private List<ListItem> songList;
     private int currentType = TYPE_SONG;
     private OnItemClickListener listener;
     private OnOptionsClickListener optionsListener;
@@ -51,16 +61,26 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     public SongAdapter(List<Song> songList) {
-        this.songList = songList;
+        this.songList = convertToListItems(songList);
     }
 
     public SongAdapter(List<Song> songList, OnItemClickListener listener) {
-        this.songList = songList;
+        this.songList = convertToListItems(songList);
         this.listener = listener;
     }
 
+    private static List<ListItem> convertToListItems(List<Song> songs) {
+        List<ListItem> items = new java.util.ArrayList<>();
+        if (songs != null) {
+            for (Song song : songs) {
+                items.add(new ListItem(song));
+            }
+        }
+        return items;
+    }
+
     public void setSongs(List<Song> newSongList, int type) {
-        List<Song> newListCopy = newSongList != null ? new java.util.ArrayList<>(newSongList) : new java.util.ArrayList<>();
+        List<ListItem> newListCopy = newSongList != null ? convertToListItems(newSongList) : new java.util.ArrayList<>();
         if (this.currentType != type) {
             this.songList = newListCopy;
             this.currentType = type;
@@ -68,7 +88,7 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             return;
         }
 
-        final List<Song> oldList = this.songList != null ? new java.util.ArrayList<>(this.songList) : new java.util.ArrayList<>();
+        final List<ListItem> oldList = this.songList != null ? new java.util.ArrayList<>(this.songList) : new java.util.ArrayList<>();
         this.currentType = type;
 
         androidx.recyclerview.widget.DiffUtil.DiffResult diffResult = androidx.recyclerview.widget.DiffUtil.calculateDiff(new androidx.recyclerview.widget.DiffUtil.Callback() {
@@ -79,20 +99,30 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             @Override
             public int getNewListSize() {
-                return newSongList != null ? newSongList.size() : 0;
+                return newListCopy != null ? newListCopy.size() : 0;
             }
 
             @Override
             public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
-                Song oldSong = oldList.get(oldItemPosition);
-                Song newSong = newListCopy.get(newItemPosition);
-                return oldSong.getId() == newSong.getId();
+                ListItem oldItem = oldList.get(oldItemPosition);
+                ListItem newItem = newListCopy.get(newItemPosition);
+                if (oldItem.type != newItem.type) return false;
+                if (oldItem.type == ListItem.TYPE_HEADER) {
+                    return oldItem.header != null && oldItem.header.equals(newItem.header);
+                }
+                return oldItem.song != null && newItem.song != null && oldItem.song.getId() == newItem.song.getId();
             }
 
             @Override
             public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
-                Song oldSong = oldList.get(oldItemPosition);
-                Song newSong = newListCopy.get(newItemPosition);
+                ListItem oldItem = oldList.get(oldItemPosition);
+                ListItem newItem = newListCopy.get(newItemPosition);
+                if (oldItem.type != newItem.type) return false;
+                if (oldItem.type == ListItem.TYPE_HEADER) {
+                    return oldItem.header != null ? oldItem.header.equals(newItem.header) : newItem.header == null;
+                }
+                Song oldSong = oldItem.song;
+                Song newSong = newItem.song;
                 return oldSong.getTitle().equals(newSong.getTitle()) &&
                         oldSong.getArtist().equals(newSong.getArtist()) &&
                         oldSong.getAlbum().equals(newSong.getAlbum()) &&
@@ -177,7 +207,10 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         java.util.List<Song> selected = new java.util.ArrayList<>();
         for (int pos : selectedPositions) {
             if (pos >= 0 && pos < songList.size()) {
-                selected.add(songList.get(pos));
+                ListItem item = songList.get(pos);
+                if (item.type == ListItem.TYPE_SONG) {
+                    selected.add(item.song);
+                }
             }
         }
         return selected;
@@ -190,7 +223,7 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public int getItemViewType(int position) {
         if (songList != null && position >= 0 && position < songList.size()) {
-            if ("HEADER".equals(songList.get(position).getArtist())) {
+            if (songList.get(position).type == ListItem.TYPE_HEADER) {
                 return TYPE_LETTER_HEADER;
             }
         }
@@ -214,12 +247,12 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder generalHolder, int position) {
         if (getItemViewType(position) == TYPE_LETTER_HEADER) {
             HeaderViewHolder holder = (HeaderViewHolder) generalHolder;
-            holder.headerText.setText(songList.get(position).getTitle());
+            holder.headerText.setText(songList.get(position).header);
             return;
         }
 
         SongViewHolder holder = (SongViewHolder) generalHolder;
-        Song song = songList.get(position);
+        Song song = songList.get(position).song;
 
         com.example.kfmusic.model.Song currentPlaying = com.example.kfmusic.utils.PlaybackManager.getInstance().getCurrentSong();
         boolean isCurrent = currentPlaying != null && currentPlaying.getId() == song.getId() && currentType == TYPE_SONG;
@@ -251,12 +284,14 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 holder.itemView.setTag(song.getId());
 
                 artThreadPool.execute(() -> {
+                    java.net.HttpURLConnection connection = null;
+                    java.io.InputStream input = null;
                     try {
                         java.net.URL url = new java.net.URL(coverUrl);
-                        java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+                        connection = (java.net.HttpURLConnection) url.openConnection();
                         connection.setDoInput(true);
                         connection.connect();
-                        java.io.InputStream input = connection.getInputStream();
+                        input = connection.getInputStream();
                         final Bitmap bitmap = BitmapFactory.decodeStream(input);
                         if (bitmap != null) {
                             new Handler(Looper.getMainLooper()).post(() -> {
@@ -269,6 +304,13 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         }
                     } catch (Exception e) {
                         // ignore
+                    } finally {
+                        if (input != null) {
+                            try { input.close(); } catch (Exception ignored) {}
+                        }
+                        if (connection != null) {
+                            connection.disconnect();
+                        }
                     }
                 });
             } else {
@@ -278,10 +320,11 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     holder.itemView.setTag(song.getId());
 
                     artThreadPool.execute(() -> {
+                        java.io.InputStream in = null;
                         try {
                             Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
                             Uri uri = android.content.ContentUris.withAppendedId(sArtworkUri, albumId);
-                            java.io.InputStream in = ctx.getContentResolver().openInputStream(uri);
+                            in = ctx.getContentResolver().openInputStream(uri);
                             final Bitmap bitmap = BitmapFactory.decodeStream(in);
                             if (bitmap != null) {
                                 new Handler(Looper.getMainLooper()).post(() -> {
@@ -294,6 +337,10 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             }
                         } catch (Exception e) {
                             // ignore
+                        } finally {
+                            if (in != null) {
+                                try { in.close(); } catch (Exception ignored) {}
+                            }
                         }
                     });
                 }
@@ -313,12 +360,14 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 holder.itemView.setTag(song.getId());
                 final android.content.Context ctx = holder.itemView.getContext();
                 artThreadPool.execute(() -> {
+                    java.net.HttpURLConnection connection = null;
+                    java.io.InputStream input = null;
                     try {
                         java.net.URL url = new java.net.URL(coverUrl);
-                        java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+                        connection = (java.net.HttpURLConnection) url.openConnection();
                         connection.setDoInput(true);
                         connection.connect();
-                        java.io.InputStream input = connection.getInputStream();
+                        input = connection.getInputStream();
                         final Bitmap bitmap = BitmapFactory.decodeStream(input);
                         if (bitmap != null) {
                             new Handler(Looper.getMainLooper()).post(() -> {
@@ -331,17 +380,26 @@ public class SongAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         }
                     } catch (Exception e) {
                         // ignore
+                    } finally {
+                        if (input != null) {
+                            try { input.close(); } catch (Exception ignored) {}
+                        }
+                        if (connection != null) {
+                            connection.disconnect();
+                        }
                     }
                 });
             }
         }
 
         holder.itemView.setOnClickListener(v -> {
+            int pos = holder.getAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return;
             if (isSelectionMode && currentType == TYPE_SONG) {
-                toggleSelection(holder.getAdapterPosition());
+                toggleSelection(pos);
             } else {
                 if (listener != null) {
-                    listener.onItemClick(song, holder.getAdapterPosition(), currentType);
+                    listener.onItemClick(song, pos, currentType);
                 }
             }
         });

@@ -30,7 +30,7 @@ public class LrcParser {
     public static List<LrcLine> parse(InputStream is) {
         List<LrcLine> lines = new ArrayList<>();
         if (is == null) return lines;
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
